@@ -1,0 +1,353 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>リバーシ</title>
+</head>
+<body>
+  <div style="display: flex;">
+    <div id="gamefielddiv">
+      <canvas id="gamefield0" width="640" height="640" onmousedown="change0();" style="position: absolute; left:0px; top:0px;"></canvas><br>
+      <canvas id="gamefield1" width="640" height="640" onmousedown="change1();" style="position: absolute; left:0px; top:650px;"></canvas>
+      <canvas id="gamefield2" width="640" height="640" onmousedown="change2();" style="position: absolute; left:330px; top:650px;"></canvas>
+    </div>
+    <div style="position: absolute; left:650px;">
+      <div id="msg0">
+        <span id="doYouPlayMiddleOfGame?"></span>
+        <button onclick="startMiddleOfGame();">途中参加</button><br>
+        <span id="doYouPlayNewGame?"></span>
+        <button onclick="startNewGame();">新しく開始</button><br>
+      </div>
+      <div id="timeLimit">
+      </div>
+      <div  style="display: flex; margin-top: 100px;">
+        <div>
+          ゲームプレイヤー<br>
+          <input type="text" id="msg_input1" style="width:200px;" />
+          <button onclick="publishMessage1();">語る</button>
+          <div id="msg1"></div>
+        </div>
+        <div>
+          観戦<br>
+          <input type="text" id="msg_input2" style="width:200px;" />
+          <button onclick="publishMessage2();">語る</button>
+          <div id="msg2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="text/javascript">
+      
+    // 1.イベントとコールバックの定義
+    var socketio = io.connect('http://localhost:8080');
+    var myName = "";
+    var once = true;
+    var timeLimit = 61;
+    var timeLimitOnceFlag = true;
+    var timeLimitChangeFlag = false;
+    var startMiddleOfGameTurn = 0;
+    var nameArray = [];
+    var colorArray = [
+        'rgb(255,00,00)',
+        'rgb(00,255,00)',
+        'rgb(00,00,255)',
+        'rgb(255,255,255)',
+        'rgb(00,00,00)',
+        'rgb(255,255,00)',
+        'rgb(255,00,255)',
+        'rgb(00,255,255)',
+        'rgb(127,127,127)',
+        'rgb(00,127,127)',
+        'rgb(127,00,127)',
+        'rgb(127,127,00)',
+        
+    ];
+    socketio.on("getName", function(data) {
+      var doYouPlayMiddleOfGame = document.getElementById("doYouPlayMiddleOfGame?");
+      doYouPlayMiddleOfGame.innerHTML = "オセロ対戦に途中参加しますか？";
+      var doYouPlayNewGame = document.getElementById("doYouPlayNewGame?");
+      doYouPlayNewGame.innerHTML = "オセロ対戦を新しく始めますか？";
+
+      nameArray.push(data);
+      if (once) {
+        once = false;
+        myName=data.value.name;
+        addMessage1("貴方は" + data.value.name + "として入室しました");
+        addMessage2("貴方は" + data.value.name + "として入室しました");
+        playingGame(myName);
+        watchingGame(myName);
+        for (var u = 0; u < data.value.field.length; ++u) {
+        for (var y = 0; y < 8; ++y) {
+        for (var x = 0; x < 8; ++x) {
+          if (data.value.field[u][y][x] != -1) {
+            for (var v = 0; v < 8; ++v) {
+              if (v == data.value.field[u][y][x]) {
+                ctx[u].fillStyle = colorArray[v];
+              }
+            }
+            ctx[u].beginPath();
+            ctx[u].arc((x+1) * 79 - 36, (y+1) * 79 - 36,CELL_HALF_SIZE,0,Math.PI*2,true);
+            ctx[u].fill();
+          }
+        }
+        }
+        }
+      }
+    });
+    socketio.on("startMiddleOfGame", function(data) {
+      if (data.value.startMiddleOfGame) {
+        startMiddleOfGameFlag = true;
+        startMiddleOfGameTurn = data.value.startMiddleOfGameTurn;
+        var msgTimeLimit = document.getElementById("timeLimit");
+        msgTimeLimit.innerHTML = "持ち時間：" + Math.floor(timeLimit / 60) + "分" + timeLimit % 60 + "秒";
+      }
+    });
+    socketio.on("playingGame", function(name) {});
+    socketio.on("watchingGame", function(name) {});
+    socketio.on("put", function (data) {
+      if (startMiddleOfGameFlag) {
+        var msg0 = document.getElementById("msg0");
+        msg0.innerHTML = "順番をお待ち下さい。" + data.value.turn;
+        startMiddleOfGameMyTurnFlag = false;
+        turn = data.value.turn;
+      }
+      if (startMiddleOfGameFlag && data.value.turn == 2) {
+      } else {
+        for (var y = 0; y < 8; ++y) {
+        for (var x = 0; x < 8; ++x) {
+          if (data.value.field[y][x] != -1) {
+            for (var v = 0; v < 8; ++v) {
+              if (v == data.value.field[y][x]) {
+                ctx[data.value.fieldNumber].fillStyle = colorArray[v];
+              }
+            }
+            ctx[data.value.fieldNumber].beginPath();
+            ctx[data.value.fieldNumber].arc((x+1) * 79 - 36, (y+1) * 79 - 36,CELL_HALF_SIZE,0,Math.PI*2,true);
+            ctx[data.value.fieldNumber].fill();
+          }
+        }
+        }
+      }
+      if (startMiddleOfGameFlag && data.value.turn == startMiddleOfGameTurn) {
+        var msg0 = document.getElementById("msg0");
+        msg0.innerHTML = "あなたの番です。";
+        startMiddleOfGameMyTurnFlag = true;
+        turn = 2;
+      }
+    });
+    socketio.on("publish1", function (data) { addMessage1(data.value); });
+    socketio.on("publish2", function (data) { addMessage2(data.value); });
+    socketio.on("disconnect", function () {});
+
+    var startMiddleOfGameFlag = false;
+    var startMiddleOfGameMyTurnFlag = false;
+    var msgArea1 = document.getElementById("msg1");
+    var msgArea2 = document.getElementById("msg2");
+    function startMiddleOfGame() {
+      socketio.emit("startMiddleOfGame");
+    }      
+    function playingGame(name) {
+      socketio.emit("playingGame", name);
+    }
+    function watchingGame(name) {
+      socketio.emit("watchingGame", name);
+    }
+
+    function publishMessage1() {
+      var textInput = document.getElementById('msg_input1');
+      var msg = textInput.value + "[" + myName + "] ";
+      socketio.emit("publish1", {value: msg});
+      socketio.emit("publish2", {value: msg});
+      textInput.value = '';
+    }
+    function publishMessage2() {
+      var textInput = document.getElementById('msg_input2');
+      var msg = textInput.value + "[" + myName + "] ";
+      socketio.emit("publish2", {value: msg});
+      textInput.value = '';
+    }
+
+    function addMessage1 (msg) {
+      var domMeg = document.createElement('div');
+      domMeg.innerHTML = new Date().toLocaleTimeString() + ' ' + msg;
+      msgArea1.appendChild(domMeg);
+    }
+    function addMessage2 (msg) {
+      var domMeg = document.createElement('div');
+      domMeg.innerHTML = new Date().toLocaleTimeString() + ' ' + msg;
+      msgArea2.appendChild(domMeg);
+    }
+
+    var FIELD_SIZE = 640;
+    var CELL_SIZE = 79;
+    var CELL_HALF_SIZE = 34;
+    var mouseX = 0;
+    var mouseY = 0;
+    var ctx = [];
+    var PLAYER_TURN = 0;
+    var turn = PLAYER_TURN;
+    var putNumber = 0;
+    var savePutNumber = 0;
+    document.onmousedown = function (e){
+	  if(!e) e = window.event; // レガシー
+      console.log(turn);
+	  console.log(myName);
+
+      if (!(startMiddleOfGameMyTurnFlag && e.clientX <= FIELD_SIZE && e.clientY <= FIELD_SIZE)) {
+        return;
+      }
+
+      mouseX = e.clientX-14;
+      mouseY = e.clientY-14;
+
+      var x = 44+mouseX - mouseX % CELL_SIZE;
+      var y = 44+mouseY - mouseY % CELL_SIZE;
+    
+      for (var v = 0; v < nameArray.length + 3; ++v) {
+        if (v == turn) {
+          ctx[0].fillStyle = colorArray[v];
+        }
+      }
+      ctx[0].beginPath();
+      ctx[0].arc(x,y,CELL_HALF_SIZE,0,Math.PI*2,true);
+      ctx[0].fill();
+    
+      var xx = Math.floor(x/CELL_SIZE);    
+      var yy = Math.floor(y/CELL_SIZE);    
+      var msg = xx + "," + yy + "に置きました" + "[" + myName + "] ";
+      socketio.emit("publish1", {value: msg});
+      socketio.emit("publish2", {value: msg});
+      var t;
+
+        turn = 0;
+      var array = {
+          'x': xx,
+          'y': yy,
+          'turn': turn
+        };
+      ++putNumber;
+      timeLimitOnceFlag = true;
+      if (timeLimit < 30) {
+        timeLimitChangeFlag = true;
+      }
+
+      socketio.emit("put",{value: array});
+      console.log("mousedown");        
+
+    };
+    function change1() {
+      var gamefield0 = document.getElementById('gamefield0');
+      var gamefield1 = document.getElementById('gamefield1');
+
+      if ( gamefield1.style.top == "650px") {
+        var position = 0;
+        var position1 = 650;
+        var size = 640;
+        var size1 = 320;
+        var update = function(){
+        var timemerKey = setTimeout(update, 3);
+          ++position;
+          --position1;
+          if (size > 320) {
+            --size;
+            ++size1;
+          }
+          gamefield0.style.top = position + "px";
+          gamefield0.style.width = size + "px";
+          gamefield0.style.height = size + "px";
+          gamefield1.style.top = position1 + "px";
+          gamefield1.style.width = size1 + "px";
+          gamefield1.style.height = size1 + "px";
+          //ループ終了処理
+          if(position >= 650){
+            clearTimeout(timemerKey);
+          }
+        }
+        
+        update();
+      }
+    }
+    function change0() {
+      var gamefield0 = document.getElementById('gamefield0');
+      var gamefield1 = document.getElementById('gamefield1');
+
+      if (gamefield0.style.top == "650px") {
+        var position = 0;
+        var position1 = 650;
+        var size = 640;
+        var size1 = 320;
+        var update = function(){
+        var timemerKey = setTimeout(update, 3);
+          ++position;
+          --position1;
+          if (size > 320) {
+            --size;
+            ++size1;
+          }
+          gamefield1.style.top = position + "px";
+          gamefield1.style.width = size + "px";
+          gamefield1.style.height = size + "px";
+          gamefield0.style.top = position1 + "px";
+          gamefield0.style.width = size1 + "px";
+          gamefield0.style.height = size1 + "px";
+          //ループ終了処理
+          if(position >= 650){
+            clearTimeout(timemerKey);
+          }
+        }
+        
+        update();        
+      }    
+    }
+    function mainLoop() {
+      if (startMiddleOfGameMyTurnFlag) {
+        if (savePutNumber != putNumber && timeLimit < 30 && timeLimitOnceFlag && timeLimitChangeFlag) {timeLimit = 31; timeLimitOnceFlag = false; }
+        --timeLimit;
+        var msgTimeLimit = document.getElementById("timeLimit");
+        msgTimeLimit.innerHTML = "持ち時間：" + Math.floor(timeLimit / 60) + "分" + timeLimit % 60 + "秒";
+      }
+    }
+    window.onload = function() {
+      //描画コンテキストの取得
+      for (var v = 0; v < 3; ++v) {
+        
+        var canvas = document.getElementById('gamefield' + v);
+        if (!canvas.getContext) {return;}
+        
+        ctx.push(canvas.getContext('2d'));
+        
+        ctx[v].fillStyle = 'rgb(00,128,00)';
+        ctx[v].fillRect(0,0,FIELD_SIZE,FIELD_SIZE); 
+        
+        //色を指定する
+        ctx[v].strokeStyle = 'rgb(00,00,00)';
+        ctx[v].lineWidth = 5;
+  
+        for (var x = 0; x < 9; ++x) {
+          ctx[v].beginPath();
+          ctx[v].moveTo(4 + x * CELL_SIZE, 0);
+          ctx[v].lineTo(4 + x * CELL_SIZE, FIELD_SIZE);
+          ctx[v].closePath();
+          ctx[v].stroke();
+        }
+        for (var y = 0; y < 9; ++y) {
+          ctx[v].beginPath();
+          ctx[v].moveTo(0,          4 + y * CELL_SIZE);
+          ctx[v].lineTo(FIELD_SIZE, 4 + y * CELL_SIZE);
+          ctx[v].closePath();
+          ctx[v].stroke();
+        }
+      }
+      var gamefield1 = document.getElementById('gamefield1');
+      var gamefield2 = document.getElementById('gamefield2');
+      var FIELD_MINI_SIZE = "320px";
+      gamefield1.style.width  = FIELD_MINI_SIZE;
+      gamefield1.style.height = FIELD_MINI_SIZE;
+      gamefield2.style.width  = FIELD_MINI_SIZE;
+      gamefield2.style.height = FIELD_MINI_SIZE;
+
+      setInterval(mainLoop, 1000);
+    };
+  </script>
+</body>
+</html>
