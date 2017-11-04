@@ -227,6 +227,7 @@
       var number = document.getElementById("number").value;
       var msg0 = document.getElementById("msg0");
       msg0.innerHTML = "最大人数" + number + "人<br>";
+      msg0.innerHTML += "途中参加：<form name='radio' style='display:inline;'><input type='radio' name='r1' value='1'>あり　<input type='radio' name='r1' value='0' checked>なし</form><br>";
       msg0.innerHTML += "対戦相手を待つか、コンピュータを参加させて下さい。<br>";
       msg0.innerHTML += "<button onClick='addAI();'>コンピュータを参加させる</button><br>";
       msg0.innerHTML += "参加者<br>";
