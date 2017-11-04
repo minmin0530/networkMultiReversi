@@ -16,6 +16,8 @@
         <button onclick="startMiddleOfGame();">途中参加</button><br>
         <span id="doYouPlayNewGame?"></span>
         <button onclick="startNewGame();">新しく開始</button><br>
+        <span id="doYouJoinAnExistingGroup?"></span>
+        <button onclick="joinExistingGroup();">開始してないグループに参加</button><br>
       </div>
       <div id="timeLimit">
       </div>
@@ -45,7 +47,11 @@
     var timeLimit = 61;
     var timeLimitOnceFlag = true;
     var timeLimitChangeFlag = false;
+    var startNewGameTurn = 0;
     var startMiddleOfGameTurn = 0;
+    var fieldNumber = 0;
+    var playerNumber = 1;
+    var playerMaxNumber = 0;
     var nameArray = [];
     var colorArray = [
         'rgb(255,00,00)',
@@ -94,25 +100,68 @@
         }
       }
     });
+    socketio.on("startNewGame", function(data) {
+      if (data.value.startNewGame) {
+          console.log("startNewGame");
+        startNewGameFlag = true;
+        startNewGameTurn = data.value.startNewGameTurn;
+        var msgTimeLimit = document.getElementById("timeLimit");
+        msgTimeLimit.innerHTML = "持ち時間：" + Math.floor(timeLimit / 60) + "分" + timeLimit % 60 + "秒";
+      }
+    });
     socketio.on("startMiddleOfGame", function(data) {
       if (data.value.startMiddleOfGame) {
+          console.log("startMiddleOfGame");
         startMiddleOfGameFlag = true;
         startMiddleOfGameTurn = data.value.startMiddleOfGameTurn;
         var msgTimeLimit = document.getElementById("timeLimit");
         msgTimeLimit.innerHTML = "持ち時間：" + Math.floor(timeLimit / 60) + "分" + timeLimit % 60 + "秒";
       }
     });
+    socketio.on("decidePlayerMaxNumber", function(data) {
+      var msg0 = document.getElementById("msg0");
+      playerMaxNumber = data.value;
+    });
+    socketio.on("joinExistingGroup2", function(data) {
+      if (data.value.fieldNumber == 1) {
+        var msg0 = document.getElementById("msg0");
+        if (data.value.initFieldMessage != myName) {
+          msg0.innerHTML = "参加者<br>" + "プレイヤー" + data.value.initFieldMessage + "<br>";
+          msg0.innerHTML += "あなた<br>";
+        } else {
+          msg0.innerHTML += "プレイヤー" + data.value.myName + "<br>";
+          msg0.innerHTML += "最大人数に満たないですが、ゲームを開始しますか？<button onClick='startGame();'>開始</button><br>";
+        }
+        ++playerNumber;
+        var data = {
+          'current': playerNumber
+        };
+        socketio.emit("currentPlayerNumber", {value: data});
+          
+      }
+    });
+    socketio.on("currentPlayersNumber", function(data) {
+      playerNumber = data.value;
+      change1();
+      fieldNumber = 1;
+      ++playerNumber;
+      var msg0 = document.getElementById("msg0");
+      msg0.innerHTML += "あなたは２番以降<br>";
+      var data = {
+        'fieldNumber': 1,
+        'myName': playerNumber,
+        'current': playerNumber
+      };
+    console.log("join"+playerNumber);
+      socketio.emit("joinExistingGroup", {value: data});
+    });
+    socketio.on("addAI", function(data) {
+      console.log("socket"+data.value);
+      playerNumber = data.value + 1;
+    });
     socketio.on("playingGame", function(name) {});
     socketio.on("watchingGame", function(name) {});
     socketio.on("put", function (data) {
-      if (startMiddleOfGameFlag) {
-        var msg0 = document.getElementById("msg0");
-        msg0.innerHTML = "順番をお待ち下さい。" + data.value.turn;
-        startMiddleOfGameMyTurnFlag = false;
-        turn = data.value.turn;
-      }
-      if (startMiddleOfGameFlag && data.value.turn == 2) {
-      } else {
         for (var y = 0; y < 8; ++y) {
         for (var x = 0; x < 8; ++x) {
           if (data.value.field[y][x] != -1) {
@@ -127,25 +176,85 @@
           }
         }
         }
-      }
-      if (startMiddleOfGameFlag && data.value.turn == startMiddleOfGameTurn) {
-        var msg0 = document.getElementById("msg0");
-        msg0.innerHTML = "あなたの番です。";
-        startMiddleOfGameMyTurnFlag = true;
-        turn = 2;
+      if (data.value.fieldNumber == 1) {
+        if (startNewGameFlag) {
+          var msg0 = document.getElementById("msg0");
+          msg0.innerHTML = "順番をお待ち下さい。" + data.value.turn;
+          startNewGameMyTurnFlag = false;
+          turn = data.value.turn;
+        }
+                          console.log("turn:"+data.value.turn);
+                          console.log("Middleturn:"+startNewGameTurn);
+          turn = data.value.turn;
+
+        if (startNewGameFlag && data.value.turn == startNewGameTurn) {
+          var msg0 = document.getElementById("msg0");
+          msg0.innerHTML = "あなたの番です。";
+          startNewGameMyTurnFlag = true;
+        }
       }
     });
     socketio.on("publish1", function (data) { addMessage1(data.value); });
     socketio.on("publish2", function (data) { addMessage2(data.value); });
     socketio.on("disconnect", function () {});
 
+    var startNewGameFlag = false;
+    var startNewGameMyTurnFlag = true;
     var startMiddleOfGameFlag = false;
     var startMiddleOfGameMyTurnFlag = false;
     var msgArea1 = document.getElementById("msg1");
     var msgArea2 = document.getElementById("msg2");
+    function startNewGame() {
+      change1();
+      fieldNumber = 1;
+      var msg0 = document.getElementById("msg0");
+      msg0.innerHTML = "最大人数を選んでください。<br>";
+      msg0.innerHTML += "<select id='number'><option value='2'>２人</option><option value='3'>３人</option><option value='4'>４人</option><option value='5'>５人</option><option value='6'>６人</option></select><button onClick='decideNumber();'>人数決定</button><br>";
+      socketio.emit("startNewGame", {value: myName});
+    }
     function startMiddleOfGame() {
-      socketio.emit("startMiddleOfGame");
-    }      
+      fieldNumber = 0;
+      var msg0 = document.getElementById("msg0");
+      msg0.innerHTML = "順番をお待ち下さい。";
+
+      socketio.emit("startMiddleOfGame", {value: myName});
+    }
+    function joinExistingGroup() {
+        console.log("myName"+myName);
+      socketio.emit("howManyPlayers", {value: myName});
+    }
+    function decideNumber() {
+      var number = document.getElementById("number").value;
+      var msg0 = document.getElementById("msg0");
+      msg0.innerHTML = "最大人数" + number + "人<br>";
+      msg0.innerHTML += "対戦相手を待つか、コンピュータを参加させて下さい。<br>";
+      msg0.innerHTML += "<button onClick='addAI();'>コンピュータを参加させる</button><br>";
+      msg0.innerHTML += "参加者<br>";
+      msg0.innerHTML += "あなた<br>";
+      var data = {
+        'max': number,
+        'myName': myName
+      };
+      socketio.emit("decidePlayerMaxNumber", {value: data});
+    }
+    function addAI() {
+      var msg0 = document.getElementById("msg0");
+      msg0.innerHTML += "コンピュータ"+playerNumber+"<br>";
+      if (playerNumber >= 2) {
+        msg0.innerHTML += "最大人数に満たないですが、ゲームを開始しますか？<button onClick='startGame();'>開始</button><br>";
+      }
+      var data = {
+        'turn': playerNumber
+      };
+    console.log("add"+playerNumber);
+      ++playerNumber;
+      socketio.emit("addAI", {value: data});
+    }
+    function startGame() {
+      var msg0 = document.getElementById("msg0");
+      msg0.innerHTML = "あなたの番です。";
+      socketio.emit("startNewGame");
+    }
     function playingGame(name) {
       socketio.emit("playingGame", name);
     }
@@ -189,11 +298,11 @@
     var putNumber = 0;
     var savePutNumber = 0;
     document.onmousedown = function (e){
-	  if(!e) e = window.event; // レガシー
+	  if(!e) e = window.event;
       console.log(turn);
 	  console.log(myName);
 
-      if (!(startMiddleOfGameMyTurnFlag && e.clientX <= FIELD_SIZE && e.clientY <= FIELD_SIZE)) {
+      if (!(startNewGameMyTurnFlag && e.clientX <= FIELD_SIZE && e.clientY <= FIELD_SIZE)) {
         return;
       }
 
@@ -203,14 +312,15 @@
       var x = 44+mouseX - mouseX % CELL_SIZE;
       var y = 44+mouseY - mouseY % CELL_SIZE;
     
+//      ++turn;
       for (var v = 0; v < nameArray.length + 3; ++v) {
         if (v == turn) {
-          ctx[0].fillStyle = colorArray[v];
+          ctx[fieldNumber].fillStyle = colorArray[v];
         }
       }
-      ctx[0].beginPath();
-      ctx[0].arc(x,y,CELL_HALF_SIZE,0,Math.PI*2,true);
-      ctx[0].fill();
+      ctx[fieldNumber].beginPath();
+      ctx[fieldNumber].arc(x,y,CELL_HALF_SIZE,0,Math.PI*2,true);
+      ctx[fieldNumber].fill();
     
       var xx = Math.floor(x/CELL_SIZE);    
       var yy = Math.floor(y/CELL_SIZE);    
@@ -219,11 +329,11 @@
       socketio.emit("publish2", {value: msg});
       var t;
 
-        turn = 0;
       var array = {
           'x': xx,
           'y': yy,
-          'turn': turn
+          'turn': turn,
+          'fieldNumber': fieldNumber
         };
       ++putNumber;
       timeLimitOnceFlag = true;
