@@ -11,6 +11,7 @@
       <canvas id="gamefield2" width="640" height="640" onmousedown="change2();" style="position: absolute; left:330px; top:650px;"></canvas>
     </div>
     <div style="position: absolute; left:650px;">
+      <div id="msg00"></div>
       <div id="msg0">
         <span id="doYouPlayMiddleOfGame?"></span>
         <button onclick="startMiddleOfGame();">途中参加</button><br>
@@ -103,6 +104,7 @@
     socketio.on("startNewGame", function(data) {
       if (data.value.startNewGame) {
           console.log("startNewGame");
+	playerNumber = data.value.currentPlayerNumber;
         startNewGameFlag = true;
         startNewGameTurn = data.value.startNewGameTurn;
         var msgTimeLimit = document.getElementById("timeLimit");
@@ -119,7 +121,7 @@
       }
     });
     socketio.on("decidePlayerMaxNumber", function(data) {
-      var msg0 = document.getElementById("msg0");
+//      var msg0 = document.getElementById("msg0");
       playerMaxNumber = data.value;
     });
     socketio.on("joinExistingGroup2", function(data) {
@@ -128,15 +130,20 @@
         if (data.value.initFieldMessage != myName) {
           msg0.innerHTML = "参加者<br>" + "プレイヤー" + data.value.initFieldMessage + "<br>";
           msg0.innerHTML += "あなた<br>";
+          var data = {
+            'middleOfGame': 1,
+            'fieldNumber': fieldNumber
+          };		
+	  socketio.emit("startNewGame", {value: data});
         } else {
           msg0.innerHTML += "プレイヤー" + data.value.myName + "<br>";
           msg0.innerHTML += "最大人数に満たないですが、ゲームを開始しますか？<button onClick='startGame();'>開始</button><br>";
         }
         ++playerNumber;
-        var data = {
-          'current': playerNumber
-        };
-        socketio.emit("currentPlayerNumber", {value: data});
+//        var data = {
+//          'current': playerNumber
+//        };
+//        socketio.emit("currentPlayerNumber", {value: data});
           
       }
     });
@@ -213,25 +220,30 @@
       socketio.emit("startNewGame", {value: myName});
     }
     function startMiddleOfGame() {
-      fieldNumber = 0;
+      fieldNumber = 1;
       var msg0 = document.getElementById("msg0");
       msg0.innerHTML = "順番をお待ち下さい。";
 
-      socketio.emit("startMiddleOfGame", {value: myName});
+      socketio.emit("startMiddleOfGame", {value: playerNumber});
     }
     function joinExistingGroup() {
-        console.log("myName"+myName);
-      socketio.emit("howManyPlayers", {value: myName});
+      fieldNumber = 1;
+      var data = {
+        'myName': myName,
+	'fieldNumber': fieldNumber
+      };
+      socketio.emit("howManyPlayers", {value: data});
     }
     function decideNumber() {
       var number = document.getElementById("number").value;
       var msg0 = document.getElementById("msg0");
+      var msg00 = document.getElementById("msg00");
       msg0.innerHTML = "最大人数" + number + "人<br>";
-      msg0.innerHTML += "途中参加：<form name='radio' style='display:inline;'><input type='radio' name='r1' value='1'>あり　<input type='radio' name='r1' value='0' checked>なし</form><br>";
       msg0.innerHTML += "対戦相手を待つか、コンピュータを参加させて下さい。<br>";
       msg0.innerHTML += "<button onClick='addAI();'>コンピュータを参加させる</button><br>";
       msg0.innerHTML += "参加者<br>";
       msg0.innerHTML += "あなた<br>";
+      msg00.innerHTML = "途中参加：<form id='radio' style='display:inline;'><input type='radio' name='r1' value='1'>あり　<input type='radio' name='r1' value='0' checked>なし</form><br>";
       var data = {
         'max': number,
         'myName': myName
@@ -254,7 +266,11 @@
     function startGame() {
       var msg0 = document.getElementById("msg0");
       msg0.innerHTML = "あなたの番です。";
-      socketio.emit("startNewGame");
+      var data = {
+        'middleOfGame': document.getElementById('radio').r1.value,
+        'fieldNumber': fieldNumber
+      };
+      socketio.emit("startNewGame", {value: data});
     }
     function playingGame(name) {
       socketio.emit("playingGame", name);
