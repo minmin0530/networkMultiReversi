@@ -14,11 +14,11 @@
       <div id="msg00"></div>
       <div id="msg0">
         <span id="doYouPlayMiddleOfGame?"></span>
-        <button onclick="startMiddleOfGame();">途中参加</button><br>
+ <!--       <button onclick="startMiddleOfGame();">途中参加</button><br>  -->
         <span id="doYouPlayNewGame?"></span>
-        <button onclick="startNewGame();">新しく開始</button><br>
+ <!--       <button onclick="startNewGame();">新しく開始</button><br>  -->
         <span id="doYouJoinAnExistingGroup?"></span>
-        <button onclick="joinExistingGroup();">開始してないグループに参加</button><br>
+ <!--        <button onclick="joinExistingGroup();">開始してないグループに参加</button><br>   -->
       </div>
       <div id="timeLimit">
       </div>
@@ -72,8 +72,9 @@
     socketio.on("getName", function(data) {
       var doYouPlayMiddleOfGame = document.getElementById("doYouPlayMiddleOfGame?");
       doYouPlayMiddleOfGame.innerHTML = "オセロ対戦に途中参加しますか？";
+      doYouPlayMiddleOfGame.innerHTML +=  "<button onclick='startMiddleOfGame();'>途中参加</button><br>";
       var doYouPlayNewGame = document.getElementById("doYouPlayNewGame?");
-      doYouPlayNewGame.innerHTML = "オセロ対戦を新しく始めますか？";
+ //     doYouPlayNewGame.innerHTML = "オセロ対戦を新しく始めますか？";
 
       nameArray.push(data);
       if (once) {
@@ -220,11 +221,11 @@
       socketio.emit("startNewGame", {value: myName});
     }
     function startMiddleOfGame() {
-      fieldNumber = 1;
+      fieldNumber = 0;
       var msg0 = document.getElementById("msg0");
       msg0.innerHTML = "順番をお待ち下さい。";
 
-      socketio.emit("startMiddleOfGame", {value: playerNumber});
+      socketio.emit("startMiddleOfGame", {value: playerNumber - 1});
     }
     function joinExistingGroup() {
       fieldNumber = 1;
@@ -363,6 +364,7 @@
 
     };
     function change1() {
+      fieldNumber = 1;
       var gamefield0 = document.getElementById('gamefield0');
       var gamefield1 = document.getElementById('gamefield1');
 
@@ -388,6 +390,12 @@
           //ループ終了処理
           if(position >= 650){
             clearTimeout(timemerKey);
+
+      var doYouPlayMiddleOfGame = document.getElementById("doYouPlayMiddleOfGame?");
+      doYouPlayMiddleOfGame.innerHTML = "";
+            var doYouPlayNewGame = document.getElementById("doYouPlayNewGame?");
+            doYouPlayNewGame.innerHTML = "オセロ対戦を新しく始めますか？";
+            doYouPlayNewGame.innerHTML += "<button onclick='startNewGame();'>新しく開始</button><br>";
           }
         }
         
@@ -395,6 +403,7 @@
       }
     }
     function change0() {
+      fieldNumber = 0;
       var gamefield0 = document.getElementById('gamefield0');
       var gamefield1 = document.getElementById('gamefield1');
 

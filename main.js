@@ -194,7 +194,7 @@ class Main {
 	console.log('value' + data.value);
 	console.log('indexArray' + indexArrayNewGame[data.value]);
 	console.log('socketID' + socketID[indexArrayNewGame[data.value]]);
-        io.sockets.connected[socketID[indexArrayNewGame[data.value]]].emit("startNewGame", {value: dd});
+        io.sockets.connected[socketID[indexArray[data.value]]].emit("startNewGame", {value: dd});
       });
     
       socket.on("decidePlayerMaxNumber", function (data) {
