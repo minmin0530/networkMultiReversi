@@ -1,17 +1,17 @@
 var userHash = {};
 var watchingNumber = 0;
 
-var startNewGameFlag = [false, false, false];//false;
+var startNewGameFlag = {};//[false, false, false, false, false];//false;
 var startNewGameNumber = 0;
-var startNewGameTurn = [0,0,0];
-var indexArrayNewGame = [];
+var startNewGameTurn = {};//[0,0,0,0,0];
+var indexArrayNewGame = {};
 var turnCountNewGame = 0;
 
 
 
-var startMiddleOfGameFlag = [false, false, false];//false;
+var startMiddleOfGameFlag = [false, false, false, false, false];//false;
 var startMiddleOfGameNumber = 0;
-var startMiddleOfGameTurn = [0,0,0];
+var startMiddleOfGameTurn = [0,0,0,0,0];
 var socketID = [];
 var indexArray = [];
 var intervalCount0 = 0;
@@ -28,6 +28,7 @@ var joinFieldFlag = [];
 var io;
 var field = [];
 var turn = [];
+var fieldOwner = {};
 
 var xx = 0;
 var yy = 0;
@@ -92,23 +93,31 @@ class AI {
 //              io.sockets.connected[socketID[indexArrayNewGame[v]]].emit("startNewGame", {value: dd});      
 //        }
 //      }
-    
-//    console.log("startNewGameTurn" + startNewGameTurn[indexArrayNewGame[turnCountNewGame]] );
-//    console.log("aiTurn" + aiTurn[aiTurnIndex]);
-      if (startNewGameTurn[indexArrayNewGame[turnCountNewGame]] == aiTurn[aiTurnIndex]) {
+    console.log("turnCountNewGame" + turnCountNewGame); 
+    console.log("startNewGameTurn" + startNewGameTurn[indexArrayNewGame[turnCountNewGame]] );
+    console.log("aiTurn" + aiTurn[aiTurnIndex]);
+      if (startNewGameTurn[indexArrayNewGame[turnCountNewGame]]-startNewGameTurn[0] == aiTurn[aiTurnIndex]) {
         ++aiTurnIndex;
         if (aiTurnIndex >= aiTurn.length) {
           aiTurnIndex = 0;
         }
-        field[1][yyy - 1][xxx - 1] = startNewGameTurn[indexArrayNewGame[turnCountNewGame]];
+        field[1][yyy - 1][xxx - 1] = startNewGameTurn[indexArrayNewGame[turnCountNewGame]]-startNewGameTurn[0];
         ++turnCountNewGame;
-        if (turnCountNewGame > currentPlayerNumber) {
-          turnCountNewGame = 0;
-        }
+	if (startNewGameTurn[0] == 0) {
+           
+          if (turnCountNewGame > currentPlayerNumber + startNewGameTurn[0]) {
+            turnCountNewGame = startNewGameTurn[0];
+          }
+           
+	} else {
+          if (turnCountNewGame > currentPlayerNumber + startNewGameTurn[0]) {
+            turnCountNewGame = startNewGameTurn[0];
+          }
+	}
         var d = {
           'x':xxx,
           'y':yyy,
-          'turn':turnCountNewGame,
+          'turn':turnCountNewGame - startNewGameTurn[0],
           'max':2,
           'field':field[1],
           'fieldNumber':1
@@ -141,7 +150,7 @@ class Main {
         arrayY.push(arrayX);
       }
       field.push(arrayY);
-      joinFieldFlag.push(0);
+      joinFieldFlag.push(1);
       turn.push(0);
     }
     setInterval(this.mainLoop, 1000);
@@ -161,27 +170,40 @@ class Main {
       };
       io.sockets.emit("getName", {value: getNameData});
       ++watchingNumber;
-
+console.log("startNewGameNumber"+ startNewGameNumber);
+      socket.on("doesTheOwnerExist?", function (data) {
+        if (fieldOwner[data.value.fieldNumber] >= 0) {
+          io.sockets.connected[socketID[data.value.myName]].emit("ownerExists");     
+	} else {
+          io.sockets.connected[socketID[data.value.myName]].emit("ownerDoesNotExist");
+	}
+      });
+      socket.on("fieldOwner", function (data) {
+        fieldOwner[data.value.fieldNumber] = data.value.myName;
+      });
       socket.on("startNewGame", function (data) {
 	if (data.value.middleOfGame == 1) {
           joinFieldFlag[data.value.fieldNumber] = 1;
 	}
-        for (var v = 0; v < startNewGameNumber; ++v) {
-          if (turnCountNewGame == 0 && startNewGameFlag[indexArrayNewGame[v]]) {
+      //  for (var v = 0; v < startNewGameNumber; ++v) {
+              console.log(data.value.myName);
+              console.log(indexArrayNewGame[data.value.myName]);
+              console.log(socketID[indexArrayNewGame[data.value.myName]]);
+          if (turnCountNewGame == 0 && startNewGameFlag[indexArrayNewGame[data.value.myName]]) {
                 var dd = {
                   'startNewGame': true,
-                  'startNewGameTurn': startNewGameTurn[indexArrayNewGame[v]]
+                  'startNewGameTurn': startNewGameTurn[indexArrayNewGame[data.value.myName]] - data.value.myName
                 };
-//              console.log(v);
-//              console.log(indexArrayNewGame[v]);
-//              console.log(socketID[indexArrayNewGame[v]]);
-                io.sockets.connected[socketID[indexArrayNewGame[v]]].emit("startNewGame", {value: dd});
+              console.log(data.value.myName);
+              console.log(indexArrayNewGame[data.value.myName]);
+              console.log(socketID[indexArrayNewGame[data.value.myName]]);
+                io.sockets.connected[socketID[data.value.myName]].emit("startNewGame", {value: dd});
             aiStartFlag = true;
           }
-        }
+      //  }
       });
       socket.on("startMiddleOfGame", function (data) {
-        indexArray.push(data.value);
+        indexArray[data.value] = startNewGameNumber;
         startNewGameFlag[data.value] = true;
         startNewGameTurn[data.value] = startNewGameNumber;
         ++startNewGameNumber;
@@ -198,10 +220,11 @@ class Main {
       });
     
       socket.on("decidePlayerMaxNumber", function (data) {
-        indexArrayNewGame.push(data.value.myName);
-        startNewGameFlag[data.value.myName] = true;
-        startNewGameTurn[data.value.myName] = startNewGameNumber;
-        console.log(startNewGameTurn[data.value]);
+	startNewGameNumber = 0;
+        indexArrayNewGame[data.value.myName] = startNewGameNumber;
+        startNewGameFlag[indexArrayNewGame[data.value.myName]] = true;
+        startNewGameTurn[indexArrayNewGame[data.value.myName]] = startNewGameNumber+data.value.myName;
+        console.log("myName"+data.value.myName);
         ++startNewGameNumber;
         initFieldMessage += data.value.myName;
         playerMaxNumber = data.value.max;
@@ -210,8 +233,11 @@ class Main {
         
       socket.on("joinExistingGroup", function (data) {
         currentPlayerNumber = data.value.current;
-        startNewGameFlag[data.value.myName] = true;
-        startNewGameTurn[data.value.myName] = startNewGameNumber;
+        indexArrayNewGame[data.value.myName] = startNewGameNumber;
+        startNewGameFlag[indexArrayNewGame[data.value.myName]] = true;
+        startNewGameTurn[indexArrayNewGame[data.value.myName]] = startNewGameNumber+fieldOwner[data.value.fieldNumber] + aiTurn.length;
+ //       startNewGameFlag[data.value.myName] = true;
+ //       startNewGameTurn[data.value.myName] = data.value.myName+startNewGameNumber;
           console.log("jointurnCountNewGame"+data.value.myName);
           console.log("joinstartNewGameTurn"+startNewGameTurn[indexArrayNewGame[data.value.myName]]);
         ++startNewGameNumber;
@@ -224,12 +250,15 @@ class Main {
         io.sockets.emit("joinExistingGroup2", {value: data});
       });
       socket.on("howManyPlayers", function(data) {
+	      console.log("howManyPlayers");
 	if (joinFieldFlag[data.value.fieldNumber]) {
-          indexArrayNewGame.push(data.value.myName);
+	      console.log("currentPlayers");
+          indexArrayNewGame[data.value.myName] = startNewGameNumber;
+          ++startNewGameNumber;
 //          console.log(data.value);
 //          console.log(indexArrayNewGame[data.value]);
 //          console.log(socketID[indexArrayNewGame[data.value]]);
-          io.sockets.connected[socketID[indexArrayNewGame[data.value.myName]]].emit(
+          io.sockets.connected[socketID[data.value.myName]].emit(
              "currentPlayersNumber", {value: currentPlayerNumber});
 	} else {
           io.sockets.connected[socketID[data.value.myName]].emit(
@@ -238,13 +267,13 @@ class Main {
 	}
       });
       socket.on("addAI", function (data) {
-        indexArrayNewGame.push(data.value.turn);
+        indexArrayNewGame[data.value.turn+data.value.myName] = startNewGameNumber;
         currentPlayerNumber = data.value.turn;
         aiTurn.push( data.value.turn);
    //     startNewGameFlag[data.value.myName] = true;
-        startNewGameTurn[data.value.turn] = startNewGameNumber;
-          console.log("addturnCountNewGame"+data.value.turn);
-          console.log("addstartNewGameTurn"+startNewGameTurn[indexArrayNewGame[data.value.turn]]);
+        startNewGameTurn[indexArrayNewGame[data.value.turn+data.value.myName]] = startNewGameNumber+data.value.myName;
+          console.log("addturnCountNewGame"+data.value.turn+data.value.myName);
+          console.log("addstartNewGameTurn"+startNewGameTurn[indexArrayNewGame[data.value.turn+data.value.myName]]);
         ++startNewGameNumber;
         ++watchingNumber;
         socketID.push( 0 );
@@ -275,13 +304,14 @@ class Main {
       socket.on("put", function (data) {
           field[data.value.fieldNumber][data.value.y][data.value.x] = data.value.turn;
           data.value.turn += 1;
-          turnCountNewGame = data.value.turn;
+          turnCountNewGame = data.value.turn+data.value.myName;
 //          console.log("aiTurn"+aiTurn);
           console.log("turnCountNewGame"+turnCountNewGame);
           console.log("startNewGameTurn"+startNewGameTurn[indexArrayNewGame[turnCountNewGame]]);
           if (data.value.turn > currentPlayerNumber) {
             data.value.turn = 0;  
             turnCount = 0;
+            turnCountNewGame = fieldOwner[data.value.fieldNumber];
           }
           var d = {
             'x':data.value.x,

@@ -102,6 +102,20 @@
         }
       }
     });
+    socketio.on("ownerExists", function(data) {
+      var doYouPlayMiddleOfGame = document.getElementById("doYouPlayMiddleOfGame?");
+      doYouPlayMiddleOfGame.innerHTML = "";
+            var doYouPlayNewGame = document.getElementById("doYouPlayNewGame?");
+            doYouPlayNewGame.innerHTML = "オセロをまだ開始してないグループに参加しますか？";
+            doYouPlayNewGame.innerHTML += "<button onclick='joinExistingGroup();'>開始してないグループに参加</button><br>";
+    });
+    socketio.on("ownerDoesNotExist", function(data) {
+      var doYouPlayMiddleOfGame = document.getElementById("doYouPlayMiddleOfGame?");
+      doYouPlayMiddleOfGame.innerHTML = "";
+            var doYouPlayNewGame = document.getElementById("doYouPlayNewGame?");
+            doYouPlayNewGame.innerHTML = "オセロ対戦を新しく始めますか？";
+            doYouPlayNewGame.innerHTML += "<button onclick='startNewGame();'>新しく開始</button><br>";
+    });
     socketio.on("startNewGame", function(data) {
       if (data.value.startNewGame) {
           console.log("startNewGame");
@@ -133,7 +147,8 @@
           msg0.innerHTML += "あなた<br>";
           var data = {
             'middleOfGame': 1,
-            'fieldNumber': fieldNumber
+            'fieldNumber': fieldNumber,
+            'myName': myName
           };		
 	  socketio.emit("startNewGame", {value: data});
         } else {
@@ -157,7 +172,7 @@
       msg0.innerHTML += "あなたは２番以降<br>";
       var data = {
         'fieldNumber': 1,
-        'myName': playerNumber,
+        'myName': myName,
         'current': playerNumber
       };
     console.log("join"+playerNumber);
@@ -184,6 +199,7 @@
           }
         }
         }
+	    console.log("Flag"+startNewGameFlag);
       if (data.value.fieldNumber == 1) {
         if (startNewGameFlag) {
           var msg0 = document.getElementById("msg0");
@@ -218,7 +234,11 @@
       var msg0 = document.getElementById("msg0");
       msg0.innerHTML = "最大人数を選んでください。<br>";
       msg0.innerHTML += "<select id='number'><option value='2'>２人</option><option value='3'>３人</option><option value='4'>４人</option><option value='5'>５人</option><option value='6'>６人</option></select><button onClick='decideNumber();'>人数決定</button><br>";
-      socketio.emit("startNewGame", {value: myName});
+      var data = {
+        'myName': myName,
+	'fieldNumber': fieldNumber
+      };
+      socketio.emit("fieldOwner", {value: data});
     }
     function startMiddleOfGame() {
       fieldNumber = 0;
@@ -258,7 +278,8 @@
         msg0.innerHTML += "最大人数に満たないですが、ゲームを開始しますか？<button onClick='startGame();'>開始</button><br>";
       }
       var data = {
-        'turn': playerNumber
+        'turn': playerNumber,
+	'myName': myName
       };
     console.log("add"+playerNumber);
       ++playerNumber;
@@ -269,7 +290,8 @@
       msg0.innerHTML = "あなたの番です。";
       var data = {
         'middleOfGame': document.getElementById('radio').r1.value,
-        'fieldNumber': fieldNumber
+        'fieldNumber': fieldNumber,
+	'myName': myName
       };
       socketio.emit("startNewGame", {value: data});
     }
@@ -351,6 +373,7 @@
           'x': xx,
           'y': yy,
           'turn': turn,
+	  'myName': myName,
           'fieldNumber': fieldNumber
         };
       ++putNumber;
@@ -391,11 +414,16 @@
           if(position >= 650){
             clearTimeout(timemerKey);
 
-      var doYouPlayMiddleOfGame = document.getElementById("doYouPlayMiddleOfGame?");
-      doYouPlayMiddleOfGame.innerHTML = "";
-            var doYouPlayNewGame = document.getElementById("doYouPlayNewGame?");
-            doYouPlayNewGame.innerHTML = "オセロ対戦を新しく始めますか？";
-            doYouPlayNewGame.innerHTML += "<button onclick='startNewGame();'>新しく開始</button><br>";
+            var data = {
+              'fieldNumber': fieldNumber,
+              'myName': myName
+	    };
+            socketio.emit("doesTheOwnerExist?", {value: data});
+ //     var doYouPlayMiddleOfGame = document.getElementById("doYouPlayMiddleOfGame?");
+ //     doYouPlayMiddleOfGame.innerHTML = "";
+ //           var doYouPlayNewGame = document.getElementById("doYouPlayNewGame?");
+ //           doYouPlayNewGame.innerHTML = "オセロ対戦を新しく始めますか？";
+ //           doYouPlayNewGame.innerHTML += "<button onclick='startNewGame();'>新しく開始</button><br>";
           }
         }
         
