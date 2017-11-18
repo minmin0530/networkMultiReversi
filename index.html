@@ -142,7 +142,7 @@
     socketio.on("joinExistingGroup2", function(data) {
       if (data.value.fieldNumber == 1) {
         var msg0 = document.getElementById("msg0");
-        if (data.value.initFieldMessage != myName) {
+        if (data.value.myName ==  myName) {
           msg0.innerHTML = "参加者<br>" + "プレイヤー" + data.value.initFieldMessage + "<br>";
           msg0.innerHTML += "あなた<br>";
           var data = {
@@ -151,7 +151,8 @@
             'myName': myName
           };		
 	  socketio.emit("startNewGame", {value: data});
-        } else {
+        }
+	if (data.value.initFieldMessage == myName) {
           msg0.innerHTML += "プレイヤー" + data.value.myName + "<br>";
           msg0.innerHTML += "最大人数に満たないですが、ゲームを開始しますか？<button onClick='startGame();'>開始</button><br>";
         }

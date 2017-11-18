@@ -20,7 +20,7 @@ var turnCount = 0;
 
 var playerMaxNumber = 0;
 var currentPlayerNumber = 0;
-var initFieldMessage = '';
+var initFieldMessage = 0;
 var aiTurn = [];
 var aiTurnIndex = 0;
 var aiStartFlag = false;
@@ -94,30 +94,25 @@ class AI {
 //        }
 //      }
     console.log("turnCountNewGame" + turnCountNewGame); 
-    console.log("startNewGameTurn" + startNewGameTurn[indexArrayNewGame[turnCountNewGame]] );
+    console.log("startNewGameTurn" + startNewGameTurn[0] );
     console.log("aiTurn" + aiTurn[aiTurnIndex]);
-      if (startNewGameTurn[indexArrayNewGame[turnCountNewGame]]-startNewGameTurn[0] == aiTurn[aiTurnIndex]) {
+    console.log("goukei" + currentPlayerNumber + initFieldMessage);
+    console.log("indexArray" + indexArrayNewGame[turnCountNewGame]);
+      if (turnCountNewGame-initFieldMessage == aiTurn[aiTurnIndex]) {
         ++aiTurnIndex;
         if (aiTurnIndex >= aiTurn.length) {
           aiTurnIndex = 0;
         }
-        field[1][yyy - 1][xxx - 1] = startNewGameTurn[indexArrayNewGame[turnCountNewGame]]-startNewGameTurn[0];
+        field[1][yyy - 1][xxx - 1] = turnCountNewGame-initFieldMessage;// startNewGameTurn[indexArrayNewGame[turnCountNewGame]]-startNewGameTurn[0];
         ++turnCountNewGame;
-	if (startNewGameTurn[0] == 0) {
-           
-          if (turnCountNewGame > currentPlayerNumber + startNewGameTurn[0]) {
-            turnCountNewGame = startNewGameTurn[0];
+          if (turnCountNewGame >= currentPlayerNumber + initFieldMessage) {
+            turnCountNewGame = initFieldMessage;
           }
-           
-	} else {
-          if (turnCountNewGame > currentPlayerNumber + startNewGameTurn[0]) {
-            turnCountNewGame = startNewGameTurn[0];
-          }
-	}
+	    console.log("1turnCountNewGame"+turnCountNewGame);
         var d = {
           'x':xxx,
           'y':yyy,
-          'turn':turnCountNewGame - startNewGameTurn[0],
+          'turn':turnCountNewGame - initFieldMessage,
           'max':2,
           'field':field[1],
           'fieldNumber':1
@@ -130,6 +125,27 @@ class AI {
             yyy = 8;
           }
         }
+        io.sockets.emit("put", {value:d});
+      } 
+      if (aiTurnIndex == 0 && turnCountNewGame >= currentPlayerNumber + initFieldMessage - 1) {
+        turnCountNewGame = initFieldMessage;
+	      console.log("2turnCountNewGame"+turnCountNewGame);
+	var d = {
+          'x':xxx,
+          'y':yyy,
+          'turn':turnCountNewGame - initFieldMessage,
+          'max':2,
+          'field':field[1],
+          'fieldNumber':1
+	};
+        xxx -= 1;
+        if (xxx <= 1) {
+          xxx = 8; 
+          yyy -= 1;
+          if (yyy <= 1) {
+            yyy = 8; 
+          } 
+        } 
         io.sockets.emit("put", {value:d});
       }
     }
@@ -192,7 +208,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
           if (turnCountNewGame == 0 && startNewGameFlag[indexArrayNewGame[data.value.myName]]) {
                 var dd = {
                   'startNewGame': true,
-                  'startNewGameTurn': startNewGameTurn[indexArrayNewGame[data.value.myName]] - data.value.myName
+                  'startNewGameTurn': startNewGameTurn[indexArrayNewGame[data.value.myName]]
                 };
               console.log(data.value.myName);
               console.log(indexArrayNewGame[data.value.myName]);
@@ -223,7 +239,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
 	startNewGameNumber = 0;
         indexArrayNewGame[data.value.myName] = startNewGameNumber;
         startNewGameFlag[indexArrayNewGame[data.value.myName]] = true;
-        startNewGameTurn[indexArrayNewGame[data.value.myName]] = startNewGameNumber+data.value.myName;
+        startNewGameTurn[indexArrayNewGame[data.value.myName]] = startNewGameNumber;
         console.log("myName"+data.value.myName);
         ++startNewGameNumber;
         initFieldMessage += data.value.myName;
@@ -235,7 +251,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
         currentPlayerNumber = data.value.current;
         indexArrayNewGame[data.value.myName] = startNewGameNumber;
         startNewGameFlag[indexArrayNewGame[data.value.myName]] = true;
-        startNewGameTurn[indexArrayNewGame[data.value.myName]] = startNewGameNumber+fieldOwner[data.value.fieldNumber] + aiTurn.length;
+        startNewGameTurn[indexArrayNewGame[data.value.myName]] = startNewGameNumber;
  //       startNewGameFlag[data.value.myName] = true;
  //       startNewGameTurn[data.value.myName] = data.value.myName+startNewGameNumber;
           console.log("jointurnCountNewGame"+data.value.myName);
@@ -254,7 +270,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
 	if (joinFieldFlag[data.value.fieldNumber]) {
 	      console.log("currentPlayers");
           indexArrayNewGame[data.value.myName] = startNewGameNumber;
-          ++startNewGameNumber;
+      //    ++startNewGameNumber;
 //          console.log(data.value);
 //          console.log(indexArrayNewGame[data.value]);
 //          console.log(socketID[indexArrayNewGame[data.value]]);
@@ -271,7 +287,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
         currentPlayerNumber = data.value.turn;
         aiTurn.push( data.value.turn);
    //     startNewGameFlag[data.value.myName] = true;
-        startNewGameTurn[indexArrayNewGame[data.value.turn+data.value.myName]] = startNewGameNumber+data.value.myName;
+        startNewGameTurn[indexArrayNewGame[data.value.turn+data.value.myName]] = startNewGameNumber;
           console.log("addturnCountNewGame"+data.value.turn+data.value.myName);
           console.log("addstartNewGameTurn"+startNewGameTurn[indexArrayNewGame[data.value.turn+data.value.myName]]);
         ++startNewGameNumber;
@@ -304,7 +320,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
       socket.on("put", function (data) {
           field[data.value.fieldNumber][data.value.y][data.value.x] = data.value.turn;
           data.value.turn += 1;
-          turnCountNewGame = data.value.turn+data.value.myName;
+          turnCountNewGame = data.value.turn+fieldOwner[data.value.fieldNumber];//data.value.myName;
 //          console.log("aiTurn"+aiTurn);
           console.log("turnCountNewGame"+turnCountNewGame);
           console.log("startNewGameTurn"+startNewGameTurn[indexArrayNewGame[turnCountNewGame]]);
