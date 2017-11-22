@@ -20,6 +20,7 @@ var turnCount = 0;
 
 var playerMaxNumber = 0;
 var currentPlayerNumber = 0;
+var playerNumber = 0;
 var initFieldMessage = 0;
 var aiTurn = [];
 var aiTurnIndex = 0;
@@ -96,7 +97,7 @@ class AI {
     console.log("turnCountNewGame" + turnCountNewGame); 
     console.log("startNewGameTurn" + startNewGameTurn[0] );
     console.log("aiTurn" + aiTurn[aiTurnIndex]);
-    console.log("goukei" + currentPlayerNumber + initFieldMessage);
+    console.log("goukei" + playerNumber + initFieldMessage);
     console.log("indexArray" + indexArrayNewGame[turnCountNewGame]);
       if (turnCountNewGame-initFieldMessage == aiTurn[aiTurnIndex]) {
         ++aiTurnIndex;
@@ -105,7 +106,7 @@ class AI {
         }
         field[1][yyy - 1][xxx - 1] = turnCountNewGame-initFieldMessage;// startNewGameTurn[indexArrayNewGame[turnCountNewGame]]-startNewGameTurn[0];
         ++turnCountNewGame;
-          if (turnCountNewGame >= currentPlayerNumber + initFieldMessage) {
+          if (turnCountNewGame >= playerNumber + initFieldMessage) {
             turnCountNewGame = initFieldMessage;
           }
 	    console.log("1turnCountNewGame"+turnCountNewGame);
@@ -127,7 +128,7 @@ class AI {
         }
         io.sockets.emit("put", {value:d});
       } 
-      if (aiTurnIndex == 0 && turnCountNewGame >= currentPlayerNumber + initFieldMessage - 1) {
+      if (aiTurnIndex == 0 && turnCountNewGame >= playerNumber + initFieldMessage - 1) {
         turnCountNewGame = initFieldMessage;
 	      console.log("2turnCountNewGame"+turnCountNewGame);
 	var d = {
@@ -195,6 +196,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
 	}
       });
       socket.on("fieldOwner", function (data) {
+	++playerNumber;
         fieldOwner[data.value.fieldNumber] = data.value.myName;
       });
       socket.on("startNewGame", function (data) {
@@ -249,6 +251,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
         
       socket.on("joinExistingGroup", function (data) {
         currentPlayerNumber = data.value.current;
+	++playerNumber;
         indexArrayNewGame[data.value.myName] = startNewGameNumber;
         startNewGameFlag[indexArrayNewGame[data.value.myName]] = true;
         startNewGameTurn[indexArrayNewGame[data.value.myName]] = startNewGameNumber;
@@ -285,6 +288,7 @@ console.log("startNewGameNumber"+ startNewGameNumber);
       socket.on("addAI", function (data) {
         indexArrayNewGame[data.value.turn+data.value.myName] = startNewGameNumber;
         currentPlayerNumber = data.value.turn;
+	++playerNumber;
         aiTurn.push( data.value.turn);
    //     startNewGameFlag[data.value.myName] = true;
         startNewGameTurn[indexArrayNewGame[data.value.turn+data.value.myName]] = startNewGameNumber;
